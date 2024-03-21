@@ -9,22 +9,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET 
 });
 
-function sendcloudinaryResponse(isSuccess,message,data){
-    return {
-        success : isSuccess,
-        message,
-        data
-    }
-}
-
 const uploadOnCloudinary = async (localFilePath) => {
     try{
         if(!localFilePath){
-            return sendcloudinaryResponse(false, 'FilePath is empty', null);
+            return null;
         }
         const response = await cloudinary.uploader.upload(localFilePath,{ 
             resource_type : 'auto'
         });
+        fs.unlinkSync(localFilePath);
         return response;
     }catch(error){
         fs.unlinkSync(localFilePath); // remove the file
