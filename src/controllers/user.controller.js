@@ -91,7 +91,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
     const { email, password, username } = req.body ; 
 
-    if(!username || !email){
+    if(!username && !email){
         throw new ApiError(400, "username or email is required");
     }
 
@@ -103,7 +103,7 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new ApiError(404,"user does not found");
     }
 
-    const isPasswordValid = await user.isPasswordCorrect(password);
+    const isPasswordValid = await user.isPassswordCorrect(password);
 
     if(!isPasswordValid){
         throw new ApiError(401,"Invalid User Credentails!");
@@ -122,7 +122,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
     return res
     .status(200)
-    .cookie("acessToken",accessToken,options)
+    .cookie("accessToken",accessToken,options)
     .cookie("refreshToken",refreshToken,options)
     .json(
         new ApiResponse(
@@ -138,17 +138,18 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler( async (req, res) => {
-    await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
         req.user._id,
         {
             $set : {
-                refreshToken : undefined
+                refreshToken : ''
             }
         },
         {
             new  : true
         }
     )
+    console.log(updatedUser);
 
     const options = {
         httpOnly : true,
