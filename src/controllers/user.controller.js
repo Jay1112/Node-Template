@@ -226,9 +226,89 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 });
 
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    try {
+        const { oldPassword, newPassword } = req.body ;
+        
+        const user = await User.findById(req?.user?._id) ;
+        const isPassswordCorrect = await user.isPassswordCorrect(oldPassword);
+    
+        if(!isPassswordCorrect){
+            throw new ApiError(400,"Invalid Old Password");
+        }
+    
+        user.password = newPassword;
+    
+        await user.save({ validateBeforeSave : false });
+    
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "Password Changed SuccessFully"
+            )
+        )
+    } catch (error) {
+        throw new ApiError(500,"Something went wrong while changing the password!");
+    }
+});
+
+const updateUserAvatar = asyncHandler(async (req, res) => {
+   try {
+     const avatarLocalPath = req.file?.path;
+ 
+     if(!avatarLocalPath){
+         throw new ApiError(400,"Avatar file is missing!");
+     }
+ 
+     const avatar = await uploadOnCloudinary(avatarLocalPath);
+ 
+     if(!avatar?.url){
+         throw new ApiError(400,"Error while uploading on avatar");
+     }
+ 
+     const user = await User.findByIdAndUpdate(req?.user?._id,{
+         $set : {
+             avatar : avatar?.url
+         }
+     },
+     { new : true})
+     .select('-password -refreshToken');
+ 
+     return res
+     .status(200)
+     .json(
+         new ApiResponse(
+            200,
+            user,
+            "Avatar Updated Successfully"
+         )
+     )
+   } catch (error) {
+        throw new ApiError(500,"Something went wrong while updating avatar image");
+   }
+});
+
+const getCurrentUser = asyncHandler(async (req, res)=>{
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            req?.user,
+            "current user data fetched Succssfully"
+        )
+    )
+});
+
 export { 
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateUserAvatar
 };
