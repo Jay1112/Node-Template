@@ -4,6 +4,7 @@ import { ApiResponse } from '../utils/ApiResponse.js';
 import { User } from '../models/user.model.js';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 const generateAccessAndRefreshToken = async (userId) => {
     try{
@@ -364,8 +365,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
             }
         ]);
     
-        console.log(channel);
-    
         if(!channel?.length){
             throw new ApiError(404,"channel does not exist");
         }
@@ -386,6 +385,66 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     }
 });
 
+const getWatchHistory = asyncHandler(async(req, res) => {
+    try {
+        const user = await User.aggregate([
+            {
+                $match: {
+                    _id : new mongoose.Types.ObjectId(req.user._id)
+                }
+            },
+            {
+                $lookup: {
+                    from:"videos",
+                    localField: "watchHistory",
+                    foreignField: "_id",
+                    as: "watchHistory",
+                    pipeline : [
+                        {
+                            $lookup : {
+                                from: "users",
+                                localField: "owner",
+                                foreignField: "_id",
+                                as: "owner",
+                                pipeline : [
+                                    {
+                                        $project: {
+                                            fullName : 1,
+                                            username : 1,
+                                            avatar : 1
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $addFields: {
+                                owner : {
+                                    $first : "$owner"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]);
+    
+        const watchedHistory = user[0]?.watchHistory;
+    
+        return res 
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                watchedHistory,
+                "Watched History fetched Successfully"
+            )
+        );
+    } catch (error) {
+        throw new ApiError(500,"Something went wrong while fetching watch history...");
+    }
+});
+
 export { 
     registerUser,
     loginUser,
@@ -394,5 +453,6 @@ export {
     changeCurrentPassword,
     getCurrentUser,
     updateUserAvatar,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 };
